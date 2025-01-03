@@ -47,28 +47,9 @@
             list-style: none;
             background: white;
             border-radius: 8px;
-            overflow-y: auto; /* Enable vertical scrolling */
-            max-height: 300px; /* Fixed height */
+            overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Styling for the scrollbar */
-        #results-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #results-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 8px;
-        }
-
-        #results-container::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 8px;
-        }
-
-        #results-container::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            margin-bottom: 2rem;
         }
 
         #results-container li {
@@ -77,6 +58,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
             transition: background-color 0.2s ease;
         }
 
@@ -87,6 +69,7 @@
         #results-container li:hover {
             background-color: #f8f9fa;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -105,6 +88,14 @@
             background-color: #f4f4f4;
         }
 
+        table input[type="number"], table input[type="text"], table select {
+            width: 90%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
         /* Responsive design */
         @media (max-width: 600px) {
             body {
@@ -121,14 +112,9 @@
                 font-size: 1rem;
             }
 
-            #results-container {
-                max-height: 250px; /* Slightly smaller height on mobile */
-            }
             table th, table td {
                 padding: 0.8rem;
             }
-
-            
         }
     </style>
 </head>
@@ -143,6 +129,9 @@
             <tr>
                 <th>Model</th>
                 <th>Price</th>
+                <th>Quantity</th>
+                <th>Discount (%)</th>
+                <th>Stock Availability</th>
             </tr>
         </thead>
         <tbody>
@@ -150,24 +139,45 @@
         </tbody>
     </table>
 
+    <button id="next-button">Next</button>
+
+    <div id="summary-section">
+        <h2>Order Summary</h2>
+        <table id="summary-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Discount (%)</th>
+                    <th>Subtotal</th>
+                    <th>Stock Availability</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Summary rows will be generated dynamically -->
+            </tbody>
+        </table>
+        <h3 id="total-amount"></h3>
+    </div>
 
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             // Handle search box input
-            $('#search-box').on('input', function() {
+            $('#search-box').on('input', function () {
                 const query = $(this).val();
                 if (query.length > 0) {
                     $.ajax({
                         url: '/ajax_search/',
                         type: 'GET',
                         data: { q: query },
-                        success: function(data) {
+                        success: function (data) {
                             const results = data.results;
                             const resultsContainer = $('#results-container');
                             resultsContainer.empty();
                             
                             if (results.length > 0) {
-                                results.forEach(function(item) {
+                                results.forEach(function (item) {
                                     resultsContainer.append(
                                         `<li data-model="${item.model}" data-price="${item.list_price}">
                                             ${item.model} - ₹${item.list_price}
@@ -178,7 +188,7 @@
                                 resultsContainer.append('<li>No products found.</li>');
                             }
                         },
-                        error: function() {
+                        error: function () {
                             console.error('Error fetching search results.');
                         }
                     });
@@ -187,8 +197,8 @@
                 }
             });
 
-            // Handle adding items to the table
-            $('#results-container').on('click', 'li', function() {
+            // Add items to the table
+            $('#results-container').on('click', 'li', function () {
                 const model = $(this).data('model');
                 const price = $(this).data('price');
                 const tableBody = $('#selected-products-table tbody');
@@ -199,12 +209,64 @@
                         `<tr data-model="${model}">
                             <td>${model}</td>
                             <td>₹${price}</td>
+                            <td><input type="number" class="quantity" placeholder="Enter quantity"></td>
+                            <td><input type="number" class="discount" placeholder="Enter discount %"></td>
+                            <td>
+                                <select class="stock">
+                                    <option value="ready">Ready to stock</option>
+                                    <option value="1week">1 week</option>
+                                    <option value="2weeks">2 weeks</option>
+                                    <option value="3weeks">3 weeks</option>
+                                    <option value="1month">1 month</option>
+                                </select>
+                            </td>
                         </tr>`
                     );
                 }
             });
+
+            // Handle the Next button
+            $('#next-button').on('click', function () {
+                // Hide the search and selected products section
+                $('#search-box, #results-container, #selected-products-table, #next-button').hide();
+                // Show the summary section
+                $('#summary-section').show();
+
+                const summaryBody = $('#summary-table tbody');
+                summaryBody.empty();
+
+                let totalAmount = 0;
+
+                // Loop through the selected products
+                $('#selected-products-table tbody tr').each(function () {
+                    const model = $(this).find('td:first').text();
+                    const price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', ''));
+                    const quantity = parseFloat($(this).find('.quantity').val()) || 0;
+                    const discount = parseFloat($(this).find('.discount').val()) || 0;
+                    const stock = $(this).find('.stock').val();
+
+                    // Calculate the total price
+                    const discountedPrice = price - (price * discount / 100);
+                    const subtotal = discountedPrice * quantity;
+                    totalAmount += subtotal;
+
+                    // Add a row to the summary table
+                    summaryBody.append(
+                        `<tr>
+                            <td>${model}</td>
+                            <td>₹${price.toFixed(2)}</td>
+                            <td>${quantity}</td>
+                            <td>${discount}</td>
+                            <td>₹${subtotal.toFixed(2)}</td>
+                            <td>${stock}</td>
+                        </tr>`
+                    );
+                });
+
+                // Display the total amount
+                $('#total-amount').text(`Total Amount: ₹${totalAmount.toFixed(2)}`);
+            });
         });
     </script>
-
 </body>
 </html>
