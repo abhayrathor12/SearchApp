@@ -21,5 +21,6 @@ from searchlistapp import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", views.homepage,name="homepage"),
+    path("", views.homepage, name="homepage"),
+    path("ajax_search/", views.ajax_search, name="ajax_search"),
 ]

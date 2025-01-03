@@ -3,9 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload PDF</title>
+    <title>Live Search</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-   <h1>this is home page</h1>
+    <h1>Search Products</h1>
+    <input type="text" id="search-box" placeholder="Enter model name">
+    <ul id="results-container"></ul>
+
+    <script>
+        $(document).ready(function() {
+            $('#search-box').on('input', function() {
+                const query = $(this).val();
+                if (query.length > 0) {
+                    $.ajax({
+                        url: '/ajax_search/',
+                        type: 'GET',
+                        data: { q: query },
+                        success: function(data) {
+                            const results = data.results;
+                            const resultsContainer = $('#results-container');
+                            resultsContainer.empty();  // Clear previous results
+                            
+                            if (results.length > 0) {
+                                results.forEach(function(item) {
+                                    resultsContainer.append(`<li>${item.model} - ₹${item.list_price}</li>`);
+                                });
+                            } else {
+                                resultsContainer.append('<li>No products found.</li>');
+                            }
+                        },
+                        error: function() {
+                            console.error('Error fetching search results.');
+                        }
+                    });
+                } else {
+                    $('#results-container').empty();  // Clear results if input is empty
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -4,7 +4,31 @@ from django.shortcuts import render
 
 
 def homepage(request):
-    return render(request,'home.html')
+
+    return render(request, "home.html")
+
+
+from django.http import JsonResponse
+from .models import Productlist
+
+
+def ajax_search(request):
+    query = request.GET.get("q", "")  # Get the query string
+    results = []
+    if query:
+        products = Productlist.objects.filter(
+            model__icontains=query
+        )  # Filter models containing the query
+        results = [
+            {"model": product.model, "list_price": str(product.list_price)}
+            for product in products
+        ]
+    return JsonResponse({"results": results})
+
+
+# def search_products(request):
+
+#     return render(request, "search_results.html", {"query": query, "results": results})
 
 
 # def import_productlist_from_csv(csv_path):
