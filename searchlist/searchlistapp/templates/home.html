@@ -47,8 +47,28 @@
             list-style: none;
             background: white;
             border-radius: 8px;
-            overflow: hidden;
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 300px; /* Fixed height */
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Styling for the scrollbar */
+        #results-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #results-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+
+        #results-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 8px;
+        }
+
+        #results-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
 
         #results-container li {
@@ -82,6 +102,10 @@
             #search-box {
                 padding: 0.8rem;
                 font-size: 1rem;
+            }
+
+            #results-container {
+                max-height: 250px; /* Slightly smaller height on mobile */
             }
         }
     </style>
