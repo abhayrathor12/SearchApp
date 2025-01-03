@@ -87,6 +87,23 @@
         #results-container li:hover {
             background-color: #f8f9fa;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table th, table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        table th {
+            background-color: #f4f4f4;
+        }
 
         /* Responsive design */
         @media (max-width: 600px) {
@@ -107,6 +124,11 @@
             #results-container {
                 max-height: 250px; /* Slightly smaller height on mobile */
             }
+            table th, table td {
+                padding: 0.8rem;
+            }
+
+            
         }
     </style>
 </head>
@@ -115,8 +137,23 @@
     <input type="text" id="search-box" placeholder="Enter model name">
     <ul id="results-container"></ul>
 
+    <h2>Selected Products</h2>
+    <table id="selected-products-table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dynamically added rows will appear here -->
+        </tbody>
+    </table>
+
+
     <script>
         $(document).ready(function() {
+            // Handle search box input
             $('#search-box').on('input', function() {
                 const query = $(this).val();
                 if (query.length > 0) {
@@ -131,7 +168,11 @@
                             
                             if (results.length > 0) {
                                 results.forEach(function(item) {
-                                    resultsContainer.append(`<li>${item.model} - ₹${item.list_price}</li>`);
+                                    resultsContainer.append(
+                                        `<li data-model="${item.model}" data-price="${item.list_price}">
+                                            ${item.model} - ₹${item.list_price}
+                                        </li>`
+                                    );
                                 });
                             } else {
                                 resultsContainer.append('<li>No products found.</li>');
@@ -145,7 +186,25 @@
                     $('#results-container').empty();
                 }
             });
+
+            // Handle adding items to the table
+            $('#results-container').on('click', 'li', function() {
+                const model = $(this).data('model');
+                const price = $(this).data('price');
+                const tableBody = $('#selected-products-table tbody');
+
+                // Check if the item is already in the table
+                if ($(`#selected-products-table tbody tr[data-model="${model}"]`).length === 0) {
+                    tableBody.append(
+                        `<tr data-model="${model}">
+                            <td>${model}</td>
+                            <td>₹${price}</td>
+                        </tr>`
+                    );
+                }
+            });
         });
     </script>
+
 </body>
 </html>
