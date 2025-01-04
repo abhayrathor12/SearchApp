@@ -26,90 +26,93 @@ def ajax_search(request):
     return JsonResponse({"results": results})
 
 
-import json
 from django.http import JsonResponse, HttpResponse
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font
-from django.views.decorators.csrf import csrf_exempt
-
-
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font
-from django.http import JsonResponse, HttpResponse
-import json
-from django.views.decorators.csrf import csrf_exempt
-
-
-import io
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font
-from django.http import JsonResponse, HttpResponse
-import json
-from django.views.decorators.csrf import csrf_exempt
-
-import json
-from django.http import JsonResponse, HttpResponse
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
-from django.views.decorators.csrf import csrf_exempt
+import pandas as pd
 from io import BytesIO
-
 import json
-from django.http import HttpResponse, JsonResponse
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
-from io import BytesIO
 from django.views.decorators.csrf import csrf_exempt
 
+
+from django.http import JsonResponse, HttpResponse
+import pandas as pd
+from io import BytesIO
+import json
+import os
+from django.conf import settings
+
+import os
 import json
 import pandas as pd
-from django.http import HttpResponse, JsonResponse
 from io import BytesIO
+from django.http import JsonResponse
+from django.conf import settings
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Border, Side
+from openpyxl.utils.dataframe import dataframe_to_rows
 from django.views.decorators.csrf import csrf_exempt
 
 
 @csrf_exempt
-def generate_excel(request):
+def download_excel(request):
     if request.method == "POST":
-        try:
-            # Parse incoming JSON data
-            data = json.loads(request.body)
-            order_data = data.get("order_data", [])
+        # Parse the JSON data sent from the frontend
+        data = json.loads(request.body).get("data", [])
 
-            # Define headings
-            headings = [
-                "Model",
-                "Price",
-                "Quantity",
-                "Discount (%)",
-                "Subtotal",
-                "Stock Availability",
-            ]
+        # Convert the data into a pandas DataFrame
+        df = pd.DataFrame(data)
 
-            # Convert order_data to a pandas DataFrame
-            df = pd.DataFrame(order_data, columns=headings)
+        # Create a BytesIO object to store the Excel file in memory
+        output = BytesIO()
 
-            # Create an in-memory output buffer
-            output = BytesIO()
+        # Create a new workbook and select the active sheet
+        wb = Workbook()
+        ws = wb.active
 
-            # Use ExcelWriter to write the DataFrame to an Excel file
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="Order Data")
+        # Write the DataFrame to the worksheet
+        for row in dataframe_to_rows(df, index=False, header=True):
+            ws.append(row)
 
-            # Reset the pointer to the start of the buffer
-            output.seek(0)
+        # Style the header with yellow background and borders
+        yellow_fill = PatternFill(
+            start_color="FFFF00", end_color="FFFF00", fill_type="solid"
+        )
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
 
-            # Prepare the HTTP response
-            response = HttpResponse(
-                output,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-            response["Content-Disposition"] = 'attachment; filename="order_data.xlsx"'
+        # Apply styles to header row
+        for cell in ws[1]:
+            cell.fill = yellow_fill
+            cell.border = thin_border
 
-            return response
+        # Apply borders to all cells
+        for row in ws.iter_rows(
+            min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+        ):
+            for cell in row:
+                cell.border = thin_border
 
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+        # Save the workbook to the output BytesIO object
+        wb.save(output)
+
+        # Move the cursor to the beginning of the file for sending
+        output.seek(0)
+
+        # Create the filename (you can customize this)
+        filename = "order_summary.xlsx"
+        file_path = os.path.join(settings.MEDIA_ROOT, filename)
+
+        # Save the Excel file temporarily in the media folder
+        with open(file_path, "wb") as f:
+            f.write(output.read())
+
+        # Return the URL of the file for download
+        file_url = os.path.join(settings.MEDIA_URL, filename)
+
+        return JsonResponse({"fileUrl": file_url})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 

@@ -68,6 +68,8 @@
     <div id="overlay1" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
 
     <!-- Custom HTML Pop-Up -->
+  
+    
     <div id="csv-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
         <h2>Download CSV Options</h2>
         
@@ -82,6 +84,7 @@
 
     <script>
         
+
         $(document).ready(function () {
             // Handle search box input
             $('#search-box').on('input', function () {
@@ -237,7 +240,6 @@
                 $('#overlay1').hide();
             });
         });
-        
 
         function getCookie(name) {
             var cookieValue = null;
@@ -245,7 +247,6 @@
                 var cookies = document.cookie.split(';');
                 for (var i = 0; i < cookies.length; i++) {
                     var cookie = cookies[i].trim();
-                    // Check if the cookie starts with the name we want
                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                         break;
@@ -255,47 +256,68 @@
             return cookieValue;
         }
         
-        $('#open-popup-button').on('click', function () {
-            const orderData = [];
-        
-            // Collect the order data from the summary table
-            $('#summary-table tbody tr').each(function () {
-                const row = [];
-                $(this).find('td').each(function () {
-                    let cellText = $(this).text().trim();
-                    // Remove rupee symbol from cell data if necessary
-                    cellText = cellText.replace('₹', '');
-                    row.push(cellText);
-                });
-                orderData.push(row);
+        $(document).ready(function () {
+            $('#open-popup-button').on('click', function () {
+                $('#csv-popup').show();
+                $('#overlay').show();
             });
         
-            // Send the data to the backend via AJAX
-            $.ajax({
-                url: '/generate_excel/',  // Django URL for the view
-                type: 'POST',
-                data: JSON.stringify({ order_data: orderData }),  // Send the data as JSON
-                contentType: 'application/json',
-                beforeSend: function(xhr, settings) {
-                    // Set CSRF token in the request headers
-                    xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
-                },
-                success: function (response) {
-                    // Trigger the download directly
-                    const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    link.href = url;
-                    link.download = 'order_summary.xlsx';
-                    link.click();
-                    URL.revokeObjectURL(url);  // Clean up the object URL
-                },
-                error: function () {
-                    console.error('Error generating the Excel file.');
-                }
+            $('#close-popup, #overlay').on('click', function () {
+                $('#csv-popup').hide();
+                $('#overlay').hide();
+            });
+        
+            
+        });
+
+        $(document).ready(function () {
+            // Handle "Download excel" button click
+            $('#open-popup-button').on('click', function () {
+                const summaryData = [];
+                
+                // Get data from the summary table
+                $('#summary-table tbody tr').each(function () {
+                    const row = {
+                        model: $(this).find('td:nth-child(1)').text(),
+                        price: $(this).find('td:nth-child(2)').text(),
+                        quantity: $(this).find('td:nth-child(3)').text(),
+                        discount: $(this).find('td:nth-child(4)').text(),
+                        subtotal: $(this).find('td:nth-child(5)').text(),
+                        stock: $(this).find('td:nth-child(6)').text()
+                    };
+                    summaryData.push(row);
+                });
+        
+                // Send the data to the backend to generate and download the Excel file
+                console.log('Sending request to URL:', '/download_excel/');  // Ensure URL is correct
+                $.ajax({
+                    url: '/download_excel/',  
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    data: JSON.stringify({ data: summaryData }),  
+                    success: function (response) {
+                        const fileUrl = response.fileUrl;
+                
+                        // Trigger the file download
+                        const a = document.createElement('a');
+                        a.href = fileUrl;
+                        a.download = 'order_summary.xlsx';  
+                        a.click();
+                    },
+                    error: function () {
+                        alert('Error generating Excel file.');
+                    }
+                });
+                
             });
         });
         
+        
+
+
     </script>
 </body>
 </html>
