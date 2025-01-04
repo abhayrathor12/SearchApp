@@ -23,4 +23,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.homepage, name="homepage"),
     path("ajax_search/", views.ajax_search, name="ajax_search"),
+    path("generate_excel/", views.generate_excel, name="generate_excel"),
 ]

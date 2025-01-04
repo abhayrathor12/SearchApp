@@ -239,126 +239,63 @@
         });
         
 
-        $(document).ready(function () {
-            // Open the custom pop-up
-            $('#open-popup-button').on('click', function () {
-                $('#csv-popup').show();
-                $('#overlay').show();
-            });
-        
-            // Close the pop-up
-            $('#close-popup, #overlay').on('click', function () {
-                $('#csv-popup').hide();
-                $('#overlay').hide();
-            });
-        
-            const downloadExcel = (includeDiscount) => {
-                const workbook = XLSX.utils.book_new();
-                const rows = [];
-                let totalAmount = 0;
-            
-                // Extract headers from the summary table
-                const headers = [];
-                $('#summary-table thead tr th').each(function (index) {
-                    if (!includeDiscount && index === 3) {
-                        // Skip the Discount column if not selected
-                        return;
-                    }
-                    headers.push($(this).text().trim());
-                });
-                rows.push(headers); // Add headers as the first row
-            
-                // Extract rows from the summary table
-                $('#summary-table tbody tr').each(function () {
-                    const row = [];
-                    $(this).find('td').each(function (index) {
-                        if (!includeDiscount && index === 3) {
-                            // Skip the Discount column if not selected
-                            return;
-                        }
-                        let cellText = $(this).text().trim();
-                        // Remove rupee symbol from cell data
-                        cellText = cellText.replace('₹', '');
-                        row.push(cellText);
-                    });
-            
-                    // Calculate total from the Subtotal column (last visible column)
-                    const subtotal = parseFloat($(this).find('td:nth-last-child(2)').text().replace('₹', '')) || 0;
-                    totalAmount += subtotal;
-            
-                    rows.push(row);
-                });
-            
-                // Add total row at the end of rows
-                const totalRow = new Array(headers.length).fill(''); // Create an empty row with the same length as headers
-                totalRow[headers.length - 2] = 'Total'; // Place 'Total' in the second last column
-                totalRow[headers.length - 1] = totalAmount.toFixed(2); // Place the calculated total in the last column
-                rows.push(totalRow);
-            
-                // Create a worksheet
-                const worksheet = XLSX.utils.aoa_to_sheet(rows);
-            
-                // Apply styles to all cells (headers and rows)
-                const range = XLSX.utils.decode_range(worksheet['!ref']);
-                for (let R = range.s.r; R <= range.e.r; R++) {
-                    for (let C = range.s.c; C <= range.e.c; C++) {
-                        const cell = XLSX.utils.encode_cell({ r: R, c: C });
-                        if (!worksheet[cell]) continue;
-            
-                        // Apply styles to the header row
-                        if (R === 0) { // For header row (first row)
-                            worksheet[cell].s = {
-                                fill: { fgColor: { rgb: 'FFFF00' } }, // Yellow background for headers
-                                font: { bold: true }, // Bold for headers
-                                border: {
-                                    top: { style: 'thin', color: { rgb: '000000' } },
-                                    bottom: { style: 'thin', color: { rgb: '000000' } },
-                                    left: { style: 'thin', color: { rgb: '000000' } },
-                                    right: { style: 'thin', color: { rgb: '000000' } },
-                                },
-                                alignment: {
-                                    horizontal: 'center',
-                                    vertical: 'center',
-                                },
-                            };
-                        } else { // Apply styling for non-header rows (optional)
-                            worksheet[cell].s = {
-                                font: { bold: false },
-                                border: {
-                                    top: { style: 'thin', color: { rgb: '000000' } },
-                                    bottom: { style: 'thin', color: { rgb: '000000' } },
-                                    left: { style: 'thin', color: { rgb: '000000' } },
-                                    right: { style: 'thin', color: { rgb: '000000' } },
-                                },
-                                alignment: {
-                                    horizontal: 'center',
-                                    vertical: 'center',
-                                },
-                                fill: { fgColor: { rgb: 'FFFFE0' } }, // Light yellow for data rows (optional)
-                            };
-                        }
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    // Check if the cookie starts with the name we want
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
                     }
                 }
-            
-                // Add the worksheet to the workbook
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Order Summary');
-            
-                // Generate and download the Excel file
-                XLSX.writeFile(workbook, 'order_summary.xlsx');
-            };
-            
-            
-            // Handle "Yes" and "No" buttons for discount column
-            $('#include-discount').on('click', function () {
-                downloadExcel(true); // Include discount column
-                $('#csv-popup, #overlay').hide();
+            }
+            return cookieValue;
+        }
+        
+        $('#open-popup-button').on('click', function () {
+            const orderData = [];
+        
+            // Collect the order data from the summary table
+            $('#summary-table tbody tr').each(function () {
+                const row = [];
+                $(this).find('td').each(function () {
+                    let cellText = $(this).text().trim();
+                    // Remove rupee symbol from cell data if necessary
+                    cellText = cellText.replace('₹', '');
+                    row.push(cellText);
+                });
+                orderData.push(row);
             });
-            
-            $('#exclude-discount').on('click', function () {
-                downloadExcel(false); // Exclude discount column
-                $('#csv-popup, #overlay').hide();
+        
+            // Send the data to the backend via AJAX
+            $.ajax({
+                url: '/generate_excel/',  // Django URL for the view
+                type: 'POST',
+                data: JSON.stringify({ order_data: orderData }),  // Send the data as JSON
+                contentType: 'application/json',
+                beforeSend: function(xhr, settings) {
+                    // Set CSRF token in the request headers
+                    xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+                },
+                success: function (response) {
+                    // Trigger the download directly
+                    const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = 'order_summary.xlsx';
+                    link.click();
+                    URL.revokeObjectURL(url);  // Clean up the object URL
+                },
+                error: function () {
+                    console.error('Error generating the Excel file.');
+                }
             });
         });
+        
     </script>
 </body>
 </html>
