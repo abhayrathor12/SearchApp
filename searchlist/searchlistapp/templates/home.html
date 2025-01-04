@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Search</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -214,6 +216,10 @@
             background: #f8f9fa;
             border-radius: 8px;
         }
+        #close-summary{
+        position: absolute;
+    right: 9%;
+    top: 11%;}
 
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -243,14 +249,14 @@
     </style>
 </head>
 <body>
-    <h1>Search Products</h1>
+    <h1 class="searc">Search Products</h1>
 <div id="search-container">
     <input type="text" id="search-box" placeholder="Enter model name">
     <button id="clear-btn" style="display: none;">&times;</button>
 </div>
 <ul id="results-container"></ul>
 
-    <h2>Selected Products</h2>
+    <h2 class="searc1">Selected Products</h2>
     <table id="selected-products-table">
         <thead>
             <tr>
@@ -270,6 +276,7 @@
 
     <div id="summary-section" style="display: none;">
         <h2>Order Summary</h2>
+        <button id="close-summary">&times;</button>
         <table id="summary-table">
             <thead>
                 <tr>
@@ -288,7 +295,15 @@
         <h3 id="total-amount"></h3>
         <button id="open-popup-button">Download CSV</button>
     </div>
+    <div id="quit-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
+        <h2>Do you want to quit editing?</h2>
+        <button id="quit-yes">Yes</button>
+        <button id="quit-no">No</button>
+    </div>
     
+    <!-- Overlay Background -->
+    <div id="overlay1" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
+
     <!-- Custom HTML Pop-Up -->
     <div id="csv-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
         <h2>Download CSV Options</h2>
@@ -396,32 +411,27 @@
                 }
             });
         
-            // Handle the Next button
-            $('#next-button').on('click', function () {
-                // Hide the search and selected products section
-                $('#search-box, #results-container, #selected-products-table, #next-button').hide();
-                // Show the summary section
+             // Handle the Next button
+             $('#next-button').on('click', function () {
+                $('#search-box, #results-container, #selected-products-table, #next-button, .searc, .searc1').hide();
                 $('#summary-section').show();
-        
+
                 const summaryBody = $('#summary-table tbody');
                 summaryBody.empty();
-        
+
                 let totalAmount = 0;
-        
-                // Loop through the selected products
+
                 $('#selected-products-table tbody tr').each(function () {
                     const model = $(this).find('td:first').text();
                     const price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', ''));
                     const quantity = parseFloat($(this).find('.quantity').val()) || 0;
                     const discount = parseFloat($(this).find('.discount').val()) || 0;
                     const stock = $(this).find('.stock').val();
-        
-                    // Calculate the total price
+
                     const discountedPrice = price - (price * discount / 100);
                     const subtotal = discountedPrice * quantity;
                     totalAmount += subtotal;
-        
-                    // Add a row to the summary table
+
                     summaryBody.append(
                         `<tr>
                             <td>${model}</td>
@@ -433,9 +443,35 @@
                         </tr>`
                     );
                 });
-        
-                // Display the total amount
+
                 $('#total-amount').text(`Total Amount: ₹${totalAmount.toFixed(2)}`);
+            });
+
+            // Handle the close summary button (cross button)
+            $('#close-summary').on('click', function () {
+                $('#quit-popup').show();
+                $('#overlay1').show();
+            });
+
+            // Handle the quit pop-up button (Yes)
+            $('#quit-yes').on('click', function () {
+                $('#summary-section').hide();
+                $('#search-box, #results-container, #selected-products-table, #next-button, .searc, .searc1').show();
+                $('#quit-popup').hide();
+                $('#selected-products-table tbody').empty(); 
+                $('#overlay1').hide();
+            });
+
+            // Handle the quit pop-up button (No)
+            $('#quit-no').on('click', function () {
+                $('#quit-popup').hide();
+                $('#overlay1').hide();
+            });
+
+            // Handle overlay click to close pop-up
+            $('#overlay1').on('click', function () {
+                $('#quit-popup').hide();
+                $('#overlay1').hide();
             });
         });
         
@@ -453,11 +489,11 @@
                 $('#overlay').hide();
             });
         
-            // Handle CSV download
-            const downloadCSV = (includeDiscount) => {
+            const downloadExcel = (includeDiscount) => {
+                const workbook = XLSX.utils.book_new();
                 const rows = [];
                 let totalAmount = 0;
-        
+            
                 // Extract headers from the summary table
                 const headers = [];
                 $('#summary-table thead tr th').each(function (index) {
@@ -468,7 +504,7 @@
                     headers.push($(this).text().trim());
                 });
                 rows.push(headers); // Add headers as the first row
-        
+            
                 // Extract rows from the summary table
                 $('#summary-table tbody tr').each(function () {
                     const row = [];
@@ -477,47 +513,86 @@
                             // Skip the Discount column if not selected
                             return;
                         }
-                        row.push($(this).text().trim());
+                        let cellText = $(this).text().trim();
+                        // Remove rupee symbol from cell data
+                        cellText = cellText.replace('₹', '');
+                        row.push(cellText);
                     });
-        
+            
                     // Calculate total from the Subtotal column (last visible column)
                     const subtotal = parseFloat($(this).find('td:nth-last-child(2)').text().replace('₹', '')) || 0;
                     totalAmount += subtotal;
-        
+            
                     rows.push(row);
                 });
-        
-                // Add total row at the end of CSV
+            
+                // Add total row at the end of rows
                 const totalRow = new Array(headers.length).fill(''); // Create an empty row with the same length as headers
                 totalRow[headers.length - 2] = 'Total'; // Place 'Total' in the second last column
-                totalRow[headers.length - 1] = `₹${totalAmount.toFixed(2)}`; // Place the calculated total in the last column
+                totalRow[headers.length - 1] = totalAmount.toFixed(2); // Place the calculated total in the last column
                 rows.push(totalRow);
-        
-                // Convert rows to CSV
-                let csvContent = 'data:text/csv;charset=utf-8,';
-                rows.forEach((rowArray) => {
-                    const row = rowArray.join(',');
-                    csvContent += row + '\r\n';
-                });
-        
-                // Create a downloadable link
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement('a');
-                link.setAttribute('href', encodedUri);
-                link.setAttribute('download', 'order_summary.csv');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+            
+                // Create a worksheet
+                const worksheet = XLSX.utils.aoa_to_sheet(rows);
+            
+                // Apply styles to all cells (headers and rows)
+                const range = XLSX.utils.decode_range(worksheet['!ref']);
+                for (let R = range.s.r; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+                        if (!worksheet[cell]) continue;
+            
+                        // Apply styles to the header row
+                        if (R === 0) { // For header row (first row)
+                            worksheet[cell].s = {
+                                fill: { fgColor: { rgb: 'FFFF00' } }, // Yellow background for headers
+                                font: { bold: true }, // Bold for headers
+                                border: {
+                                    top: { style: 'thin', color: { rgb: '000000' } },
+                                    bottom: { style: 'thin', color: { rgb: '000000' } },
+                                    left: { style: 'thin', color: { rgb: '000000' } },
+                                    right: { style: 'thin', color: { rgb: '000000' } },
+                                },
+                                alignment: {
+                                    horizontal: 'center',
+                                    vertical: 'center',
+                                },
+                            };
+                        } else { // Apply styling for non-header rows (optional)
+                            worksheet[cell].s = {
+                                font: { bold: false },
+                                border: {
+                                    top: { style: 'thin', color: { rgb: '000000' } },
+                                    bottom: { style: 'thin', color: { rgb: '000000' } },
+                                    left: { style: 'thin', color: { rgb: '000000' } },
+                                    right: { style: 'thin', color: { rgb: '000000' } },
+                                },
+                                alignment: {
+                                    horizontal: 'center',
+                                    vertical: 'center',
+                                },
+                                fill: { fgColor: { rgb: 'FFFFE0' } }, // Light yellow for data rows (optional)
+                            };
+                        }
+                    }
+                }
+            
+                // Add the worksheet to the workbook
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Order Summary');
+            
+                // Generate and download the Excel file
+                XLSX.writeFile(workbook, 'order_summary.xlsx');
             };
-        
+            
+            
             // Handle "Yes" and "No" buttons for discount column
             $('#include-discount').on('click', function () {
-                downloadCSV(true); // Include discount column
+                downloadExcel(true); // Include discount column
                 $('#csv-popup, #overlay').hide();
             });
-        
+            
             $('#exclude-discount').on('click', function () {
-                downloadCSV(false); // Exclude discount column
+                downloadExcel(false); // Exclude discount column
                 $('#csv-popup, #overlay').hide();
             });
         });
