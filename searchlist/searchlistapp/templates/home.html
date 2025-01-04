@@ -32,6 +32,12 @@
         h3 { font-size: 1.5rem; }
 
         /* Search Box Styling */
+
+        #search-container {
+            position: relative;
+            width: 100%;
+           
+        }
         #search-box {
             width: 100%;
             padding: 1rem 1.5rem;
@@ -74,7 +80,27 @@
             background-color: #f8f9fa;
             transform: translateX(5px);
         }
-
+        #clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 12%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #clear-btn:hover {
+            color: #3498db;
+        }
         /* Table Styling */
         table {
             width: 100%;
@@ -218,8 +244,11 @@
 </head>
 <body>
     <h1>Search Products</h1>
+<div id="search-container">
     <input type="text" id="search-box" placeholder="Enter model name">
-    <ul id="results-container"></ul>
+    <button id="clear-btn" style="display: none;">&times;</button>
+</div>
+<ul id="results-container"></ul>
 
     <h2>Selected Products</h2>
     <table id="selected-products-table">
@@ -274,10 +303,20 @@
     <div id="overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
 
     <script>
+        
         $(document).ready(function () {
             // Handle search box input
             $('#search-box').on('input', function () {
                 const query = $(this).val();
+                const clearBtn = $('#clear-btn');
+        
+                // Show/hide the clear button based on input length
+                if (query.length > 0) {
+                    clearBtn.show();
+                } else {
+                    clearBtn.hide();
+                }
+        
                 if (query.length > 0) {
                     $.ajax({
                         url: '/ajax_search/',
@@ -308,13 +347,33 @@
                     $('#results-container').empty();
                 }
             });
-
+        
+            // Handle the clear button click
+            $('#clear-btn').on('click', function () {
+                $('#search-box').val(''); // Clear the input
+                $(this).hide(); // Hide the cross button
+                $('#results-container').empty(); // Clear the results
+                // Trigger an empty search query to reset the results
+                $.ajax({
+                    url: '/ajax_search/',
+                    type: 'GET',
+                    data: { q: '' },
+                    success: function (data) {
+                        // Optionally, handle empty query results here
+                        console.log(data.results); // Empty query, you may choose to do nothing or show a message
+                    },
+                    error: function () {
+                        console.error('Error fetching search results.');
+                    }
+                });
+            });
+        
             // Add items to the table
             $('#results-container').on('click', 'li', function () {
                 const model = $(this).data('model');
                 const price = $(this).data('price');
                 const tableBody = $('#selected-products-table tbody');
-
+        
                 // Check if the item is already in the table
                 if ($(`#selected-products-table tbody tr[data-model="${model}"]`).length === 0) {
                     tableBody.append(
@@ -336,19 +395,19 @@
                     );
                 }
             });
-
+        
             // Handle the Next button
             $('#next-button').on('click', function () {
                 // Hide the search and selected products section
                 $('#search-box, #results-container, #selected-products-table, #next-button').hide();
                 // Show the summary section
                 $('#summary-section').show();
-
+        
                 const summaryBody = $('#summary-table tbody');
                 summaryBody.empty();
-
+        
                 let totalAmount = 0;
-
+        
                 // Loop through the selected products
                 $('#selected-products-table tbody tr').each(function () {
                     const model = $(this).find('td:first').text();
@@ -356,12 +415,12 @@
                     const quantity = parseFloat($(this).find('.quantity').val()) || 0;
                     const discount = parseFloat($(this).find('.discount').val()) || 0;
                     const stock = $(this).find('.stock').val();
-
+        
                     // Calculate the total price
                     const discountedPrice = price - (price * discount / 100);
                     const subtotal = discountedPrice * quantity;
                     totalAmount += subtotal;
-
+        
                     // Add a row to the summary table
                     summaryBody.append(
                         `<tr>
@@ -374,11 +433,12 @@
                         </tr>`
                     );
                 });
-
+        
                 // Display the total amount
                 $('#total-amount').text(`Total Amount: ₹${totalAmount.toFixed(2)}`);
             });
         });
+        
 
         $(document).ready(function () {
             // Open the custom pop-up
