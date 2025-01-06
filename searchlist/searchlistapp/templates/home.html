@@ -74,10 +74,17 @@
     
     <div id="csv-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
         <h2>Download CSV Options</h2>
-        
-        <p>Do you want to include the "Discount (%)" column in the CSV file?</p>
-        <button id="include-discount">Yes</button>
-        <button id="exclude-discount">No</button>
+        <form id="csv-options-form">
+            <label>
+                <input type="checkbox" id="include-discount" name="include_discount" value="true">
+                Include Discount
+            </label><br>
+            <label>
+                <input type="checkbox" id="include-list-price" name="include_list_price" value="true">
+                Include List Price
+            </label><br>
+        </form>
+        <button id="confirm-csv-options">Confirm</button>
         <button id="close-popup">Cancel</button>
     </div>
     
@@ -265,108 +272,95 @@
         }
 
         $(document).ready(function () {
+            // Show the popup when the "Download CSV" button is clicked
             $('#open-popup-button').on('click', function () {
                 $('#csv-popup').show();
                 $('#overlay').show();
             });
         
+            // Hide the popup when "Cancel" button is clicked
             $('#close-popup, #overlay').on('click', function () {
                 $('#csv-popup').hide();
                 $('#overlay').hide();
             });
         
-            
-        });
-
-        $(document).ready(function () {
-        // Show the popup when the "Download Excel" button is clicked
-        $('#open-csv-popup-button').on('click', function () {
-            $('#csv-popup').show();
-            $('#overlay').show();
-        });
-
-        // Hide the popup when "Cancel" button is clicked
-        $('#close-popup').on('click', function () {
-            $('#csv-popup').hide();
-            $('#overlay').hide();
-        });
-
-        // Handle the "Yes" button (include discount column)
-        $('#include-discount').on('click', function () {
-            sendDiscountOption(true); // Send "Yes" to include the Discount column
-        });
-
-        // Handle the "No" button (exclude discount column)
-        $('#exclude-discount').on('click', function () {
-            sendDiscountOption(false); // Send "No" to exclude the Discount column
-        });
-
-        function sendDiscountOption(includeDiscount) {
-            // Hide the popup
-            $('#csv-popup').hide();
-            $('#overlay').hide();
-
-            // Send the user's decision to the backend (AJAX POST request)
-            $.ajax({
-                url: '/download_excel/',  // Your backend URL
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    include_discount: includeDiscount,  // Send whether to include the discount column
-                    data: getDataForExcel()  // Your data that you want to send
-                }),
-                success: function (response) {
-                    // Handle the response (download the file or show a link)
-                    window.location.href = response.fileUrl; // Redirect to download the file
-                },
-                error: function () {
-                    alert('Error generating the file.');
-                }
+            // Handle the "Confirm" button
+            $('#confirm-csv-options').on('click', function () {
+                // Get checkbox values
+                const includeDiscount = $('#include-discount').is(':checked');
+                const includeListPrice = $('#include-list-price').is(':checked');
+        
+                // Hide the popup
+                $('#csv-popup').hide();
+                $('#overlay').hide();
+        
+                // Send the selected options to the backend
+                sendCsvOptions(includeDiscount, includeListPrice);
             });
-        }
-
-        function getDataForExcel() {
-            const data = [];
-            let totalAmount = 0;
         
-            $('#selected-products-table tbody tr').each(function () {
-                const Catlog = $(this).find('td:first').text();
-                const Price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', '')) || 0;
-                const Quantity = parseFloat($(this).find('.quantity').val()) || 0;
-                const Discount = $(this).find('.discount').val();
-                const Stock = $(this).find('.stock').val();
-        
-                const discountedPrice = Price - (Price * Discount / 100);
-                const subTotal = discountedPrice * Quantity;
-                totalAmount += subTotal;
-
-
-
-         
-                const row = {
-                    Catlog: Catlog,
-                    Price: Price.toFixed(2),
-                    Quantity: Quantity,
-                    SubTotal: subTotal.toFixed(2),
-                    Discount:Discount +' %',
-                    Stock: Stock
+            function sendCsvOptions(includeDiscount, includeListPrice) {
+                // Prepare data for the backend
+                const data = {
+                    include_discount: includeDiscount,
+                    include_list_price: includeListPrice,
+                    data: getDataForExcel() // Include data from your table
                 };
         
-                data.push(row);
-            });
+                // AJAX POST request to send the options to the backend
+                $.ajax({
+                    url: '/download_excel/', // Your backend URL
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        // Handle successful response (e.g., download the file)
+                        window.location.href = response.fileUrl; // Redirect to download the file
+                    },
+                    error: function () {
+                        alert('Error generating the file.');
+                    }
+                });
+            }
         
-            // Add total amount as the last row
-            data.push({
-                Catlog: 'Total Amount',
-                Price: '',
-                Quantity: '',
-                SubTotal: totalAmount.toFixed(2),
-                Stock: ''
-            });
+            function getDataForExcel() {
+                const data = [];
+                let totalAmount = 0;
         
-            return data;
-        }
-    });
+                $('#selected-products-table tbody tr').each(function () {
+                    const Catlog = $(this).find('td:first').text();
+                    const Price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', '')) || 0;
+                    const Quantity = parseFloat($(this).find('.quantity').val()) || 0;
+                    const Discount = $(this).find('.discount').val();
+                    const Stock = $(this).find('.stock').val();
+        
+                    const discountedPrice = Price - (Price * Discount / 100);
+                    const subTotal = discountedPrice * Quantity;
+                    totalAmount += subTotal;
+        
+                    const row = {
+                        Catlog: Catlog,
+                        Price: Price.toFixed(2),
+                        Quantity: Quantity,
+                        SubTotal: subTotal.toFixed(2),
+                        Discount: Discount + ' %',
+                        Stock: Stock
+                    };
+        
+                    data.push(row);
+                });
+        
+                // Add total amount as the last row
+                data.push({
+                    Catlog: 'Total Amount',
+                    Price: '',
+                    Quantity: '',
+                    SubTotal: totalAmount.toFixed(2),
+                    Stock: ''
+                });
+        
+                return data;
+            }
+        });
         
 
 

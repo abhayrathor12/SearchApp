@@ -57,16 +57,16 @@ def download_excel(request):
     if request.method == "POST":
         # Parse the JSON data sent from the frontend
         request_data = json.loads(request.body)
-        include_discount = request_data.get(
-            "include_discount", False
-        )  # Get the user's choice for discount column
+        include_discount = request_data.get("include_discount", False)
+        include_list_price = request_data.get("include_list_price", False)
         data = request_data.get("data", [])  # Get the product data
 
-        # If the user doesn't want the discount column, remove it from the data
-        if not include_discount:
-            for row in data:
-                if "Discount" in row:
-                    del row["Discount"]
+        # Remove unwanted columns based on user's choice
+        for row in data:
+            if not include_discount and "Discount" in row:
+                del row["Discount"]
+            if not include_list_price and "Price" in row:
+                del row["Price"]
 
         # Convert the data into a pandas DataFrame
         df = pd.DataFrame(data)
