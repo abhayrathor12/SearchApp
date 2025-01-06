@@ -52,6 +52,18 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from django.views.decorators.csrf import csrf_exempt
 
 
+import os
+import json
+from io import BytesIO
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Border, Side, Alignment
+from openpyxl.utils.dataframe import dataframe_to_rows
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+
+
 @csrf_exempt
 def download_excel(request):
     if request.method == "POST":
@@ -123,9 +135,20 @@ def download_excel(request):
         # Move the cursor to the beginning of the file for sending
         output.seek(0)
 
-        # Create the filename (you can customize this)
-        filename = "order_summary.xlsx"
-        file_path = os.path.join(settings.MEDIA_ROOT, filename)
+        # Create the filename dynamically
+        base_filename = "Quotation"
+        extension = ".xlsx"
+        counter = 0
+        while True:
+            filename = (
+                f"{base_filename}_{counter}{extension}"
+                if counter > 1
+                else f"{base_filename}{extension}"
+            )
+            file_path = os.path.join(settings.MEDIA_ROOT, filename)
+            if not os.path.exists(file_path):  # Check if the file already exists
+                break
+            counter += 1
 
         # Save the Excel file temporarily in the media folder
         with open(file_path, "wb") as f:
