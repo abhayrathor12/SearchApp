@@ -255,7 +255,7 @@
             }
             return cookieValue;
         }
-        
+
         $(document).ready(function () {
             $('#open-popup-button').on('click', function () {
                 $('#csv-popup').show();
@@ -271,50 +271,76 @@
         });
 
         $(document).ready(function () {
-            // Handle "Download excel" button click
-            $('#open-popup-button').on('click', function () {
-                const summaryData = [];
-                
-                // Get data from the summary table
-                $('#summary-table tbody tr').each(function () {
-                    const row = {
-                        model: $(this).find('td:nth-child(1)').text(),
-                        price: $(this).find('td:nth-child(2)').text(),
-                        quantity: $(this).find('td:nth-child(3)').text(),
-                        discount: $(this).find('td:nth-child(4)').text(),
-                        subtotal: $(this).find('td:nth-child(5)').text(),
-                        stock: $(this).find('td:nth-child(6)').text()
-                    };
-                    summaryData.push(row);
-                });
-        
-                // Send the data to the backend to generate and download the Excel file
-                console.log('Sending request to URL:', '/download_excel/');  // Ensure URL is correct
-                $.ajax({
-                    url: '/download_excel/',  
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    data: JSON.stringify({ data: summaryData }),  
-                    success: function (response) {
-                        const fileUrl = response.fileUrl;
-                
-                        // Trigger the file download
-                        const a = document.createElement('a');
-                        a.href = fileUrl;
-                        a.download = 'order_summary.xlsx';  
-                        a.click();
-                    },
-                    error: function () {
-                        alert('Error generating Excel file.');
-                    }
-                });
-                
-            });
+        // Show the popup when the "Download Excel" button is clicked
+        $('#open-csv-popup-button').on('click', function () {
+            $('#csv-popup').show();
+            $('#overlay').show();
         });
-        
+
+        // Hide the popup when "Cancel" button is clicked
+        $('#close-popup').on('click', function () {
+            $('#csv-popup').hide();
+            $('#overlay').hide();
+        });
+
+        // Handle the "Yes" button (include discount column)
+        $('#include-discount').on('click', function () {
+            sendDiscountOption(true); // Send "Yes" to include the Discount column
+        });
+
+        // Handle the "No" button (exclude discount column)
+        $('#exclude-discount').on('click', function () {
+            sendDiscountOption(false); // Send "No" to exclude the Discount column
+        });
+
+        function sendDiscountOption(includeDiscount) {
+            // Hide the popup
+            $('#csv-popup').hide();
+            $('#overlay').hide();
+
+            // Send the user's decision to the backend (AJAX POST request)
+            $.ajax({
+                url: '/download_excel/',  // Your backend URL
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    include_discount: includeDiscount,  // Send whether to include the discount column
+                    data: getDataForExcel()  // Your data that you want to send
+                }),
+                success: function (response) {
+                    // Handle the response (download the file or show a link)
+                    window.location.href = response.fileUrl; // Redirect to download the file
+                },
+                error: function () {
+                    alert('Error generating the file.');
+                }
+            });
+        }
+
+        function getDataForExcel() {
+            // Gather the data from your table or wherever the product data is stored
+            // Example data format: you can customize this part based on how you store your table data
+            const data = [];
+            $('#selected-products-table tbody tr').each(function () {
+                const model = $(this).find('td:first').text();
+                const price = $(this).find('td:nth-child(2)').text();
+                const quantity = $(this).find('.quantity').val();
+                const discount = $(this).find('.discount').val();
+                const stock = $(this).find('.stock').val();
+
+                const row = {
+                    model: model,
+                    price: price,
+                    quantity: quantity,
+                    discount: discount, // Include discount column if needed
+                    stock: stock
+                };
+
+                data.push(row);
+            });
+            return data;
+        }
+    });
         
 
 
