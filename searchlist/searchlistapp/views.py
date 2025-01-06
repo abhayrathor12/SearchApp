@@ -62,15 +62,13 @@ def download_excel(request):
         )  # Get the user's choice for discount column
         data = request_data.get("data", [])  # Get the product data
 
-        total_amount = request_data.get("total_amount", "")  # Get the total amount
-        print(data, total_amount)
-
+        print(data)
         # If the user doesn't want the discount column, remove it from the data
         if not include_discount:
             for row in data:
-                if "discount" in row:
-                    del row["discount"]
-
+                if "Discount" in row:
+                    del row["Discount"]
+        print(data)
         # Convert the data into a pandas DataFrame
         df = pd.DataFrame(data)
 
@@ -109,7 +107,7 @@ def download_excel(request):
                 cell.border = thin_border
 
         # Add a row for total amount at the end (optional)
-        ws.append(["", "", "", "", "Total Amount", total_amount])
+        
 
         # Save the workbook to the output BytesIO object
         wb.save(output)

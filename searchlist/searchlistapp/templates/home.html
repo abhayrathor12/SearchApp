@@ -318,26 +318,44 @@
         }
 
         function getDataForExcel() {
-            // Gather the data from your table or wherever the product data is stored
-            // Example data format: you can customize this part based on how you store your table data
             const data = [];
+            let totalAmount = 0;
+        
             $('#selected-products-table tbody tr').each(function () {
-                const model = $(this).find('td:first').text();
-                const price = $(this).find('td:nth-child(2)').text();
-                const quantity = $(this).find('.quantity').val();
-                const discount = $(this).find('.discount').val();
-                const stock = $(this).find('.stock').val();
+                const Model = $(this).find('td:first').text();
+                const Price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', '')) || 0;
+                const Quantity = parseFloat($(this).find('.quantity').val()) || 0;
+                const Discount = $(this).find('.discount').val();
+                const Stock = $(this).find('.stock').val();
+        
+                const discountedPrice = Price - (Price * Discount / 100);
+                const subTotal = discountedPrice * Quantity;
+                totalAmount += subTotal;
 
+
+
+         
                 const row = {
-                    model: model,
-                    price: price,
-                    quantity: quantity,
-                    discount: discount, // Include discount column if needed
-                    stock: stock
+                    Model: Model,
+                    Price: Price.toFixed(2),
+                    Quantity: Quantity,
+                    SubTotal: subTotal.toFixed(2),
+                    Discount:Discount +' %',
+                    Stock: Stock
                 };
-
+        
                 data.push(row);
             });
+        
+            // Add total amount as the last row
+            data.push({
+                Model: 'Total Amount',
+                Price: '',
+                Quantity: '',
+                SubTotal: totalAmount.toFixed(2),
+                Stock: ''
+            });
+        
             return data;
         }
     });
