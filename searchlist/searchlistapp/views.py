@@ -47,7 +47,7 @@ from io import BytesIO
 from django.http import JsonResponse
 from django.conf import settings
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side
+from openpyxl.styles import PatternFill, Border, Side, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
 from django.views.decorators.csrf import csrf_exempt
 
@@ -62,13 +62,12 @@ def download_excel(request):
         )  # Get the user's choice for discount column
         data = request_data.get("data", [])  # Get the product data
 
-        print(data)
         # If the user doesn't want the discount column, remove it from the data
         if not include_discount:
             for row in data:
                 if "Discount" in row:
                     del row["Discount"]
-        print(data)
+
         # Convert the data into a pandas DataFrame
         df = pd.DataFrame(data)
 
@@ -93,21 +92,30 @@ def download_excel(request):
             top=Side(style="thin"),
             bottom=Side(style="thin"),
         )
+        center_alignment = Alignment(horizontal="center", vertical="center")
 
         # Apply styles to header row
         for cell in ws[1]:
             cell.fill = yellow_fill
             cell.border = thin_border
+            cell.alignment = center_alignment
 
-        # Apply borders to all cells
+        # Apply borders and center alignment to all cells
         for row in ws.iter_rows(
             min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column
         ):
             for cell in row:
                 cell.border = thin_border
+                cell.alignment = center_alignment
 
-        # Add a row for total amount at the end (optional)
-        
+        # Auto-adjust column widths
+        for col in ws.columns:
+            max_length = 0
+            col_letter = col[0].column_letter  # Get the column letter
+            for cell in col:
+                if cell.value:  # Ensure the cell has a value
+                    max_length = max(max_length, len(str(cell.value)))
+            ws.column_dimensions[col_letter].width = max_length + 2  # Add some padding
 
         # Save the workbook to the output BytesIO object
         wb.save(output)

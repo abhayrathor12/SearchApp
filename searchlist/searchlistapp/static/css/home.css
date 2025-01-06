@@ -16,6 +16,7 @@ body {
     margin: 0 auto;
     min-height: 100vh;
 }
+
 #results-container {
     list-style: none;
     background: white;
@@ -40,6 +41,7 @@ body {
     background-color: #f8f9fa;
     transform: translateX(5px);
 }
+
 table input[type="number"],
 table input[type="text"],
 table select {
@@ -59,7 +61,8 @@ table select:focus {
 }
 
 /* Header styles */
-.searc, .searc1 {
+.searc,
+.searc1 {
     color: #1a365d;
     margin-bottom: 1.5rem;
     font-weight: 300;
@@ -139,7 +142,8 @@ table {
     margin-bottom: 2rem;
 }
 
-th, td {
+th,
+td {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
@@ -158,9 +162,10 @@ th {
 tr:hover {
     background-color: #f8fafc;
 }
+
 /* Button styles */
 button {
-    background: linear-gradient(135deg, #4299e1, #667eea);
+
     color: white;
     padding: 0.875rem 1.75rem;
     border: none;
@@ -168,17 +173,44 @@ button {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
+
+}
+
+.remove-row-btn {
+    position: relative;
+    left: 0.5rem;
+    top: 21px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #718096;
+    font-size: 2.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: transform 0.2s ease;
+}
+
+#open-popup-button {
+    background: linear-gradient(135deg, #4299e1, #667eea);
     box-shadow: 0 4px 6px rgba(66, 153, 225, 0.2);
 }
 
-button:hover {
+#open-popup-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(66, 153, 225, 0.3);
     background: linear-gradient(135deg, #3182ce, #5a67d8);
 }
 
 #next-button {
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    box-shadow: 0 4px 6px rgba(66, 153, 225, 0.2);
     margin-top: 1rem;
+}
+
+#next-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(66, 153, 225, 0.3);
+    background: linear-gradient(135deg, #3182ce, #5a67d8);
 }
 
 /* Summary section styles */
@@ -200,7 +232,8 @@ button:hover {
 }
 
 /* Popup styles */
-#quit-popup, #csv-popup {
+#quit-popup,
+#csv-popup {
     background: white;
     padding: 2rem;
     border-radius: 8px;
@@ -208,11 +241,22 @@ button:hover {
     text-align: center;
 }
 
-#quit-popup button, #csv-popup button {
+#quit-popup button,
+#csv-popup button {
     margin: 0.5rem;
+    background: linear-gradient(135deg, #4299e1, #667eea);
+    box-shadow: 0 4px 6px rgba(66, 153, 225, 0.2);
 }
 
-#quit-popup h2, #csv-popup h2 {
+#quit-popup button,
+#csv-popup button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(66, 153, 225, 0.3);
+    background: linear-gradient(135deg, #3182ce, #5a67d8);
+}
+
+#quit-popup h2,
+#csv-popup h2 {
     margin-bottom: 1rem;
     color: #2d3748;
 }

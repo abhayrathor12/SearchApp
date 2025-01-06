@@ -12,22 +12,23 @@
     
 </head>
 <body>
-    <h1 class="searc">Search Products</h1>
+    <h1 class="searc">Search Catlog</h1>
 <div id="search-container">
     <input type="text" id="search-box" placeholder="Enter model name">
     <button id="clear-btn" style="display: none;">&times;</button>
 </div>
 <ul id="results-container"></ul>
 
-    <h2 class="searc1">Selected Products</h2>
+    <h2 class="searc1">Selected Catlog</h2>
     <table id="selected-products-table">
         <thead>
             <tr>
-                <th>Model</th>
+                <th>Catlog</th>
                 <th>Price</th>
                 <th>Quantity</th>
                 <th>Discount (%)</th>
                 <th>Stock Availability</th>
+                <th>Remove </th>
             </tr>
         </thead>
         <tbody>
@@ -38,7 +39,7 @@
     <button id="next-button">Next</button>
 
     <div id="summary-section" style="display: none;">
-        <h2>Order Summary</h2>
+        <h2>Quotation Summary</h2>
         <button id="close-summary">&times;</button>
         <table id="summary-table">
             <thead>
@@ -49,6 +50,7 @@
                     <th>Discount (%)</th>
                     <th>Subtotal</th>
                     <th>Stock Availability</th>
+                  
                 </tr>
             </thead>
             <tbody>
@@ -154,7 +156,7 @@
                 const model = $(this).data('model');
                 const price = $(this).data('price');
                 const tableBody = $('#selected-products-table tbody');
-        
+            
                 // Check if the item is already in the table
                 if ($(`#selected-products-table tbody tr[data-model="${model}"]`).length === 0) {
                     tableBody.append(
@@ -172,9 +174,15 @@
                                     <option value="1month">1 month</option>
                                 </select>
                             </td>
+                            <td>
+                                <button class="remove-row-btn">&times;</button>
+                            </td>
                         </tr>`
                     );
                 }
+            });
+            $('#selected-products-table').on('click', '.remove-row-btn', function () {
+                $(this).closest('tr').remove(); // Remove the closest row
             });
         
              // Handle the Next button
@@ -322,7 +330,7 @@
             let totalAmount = 0;
         
             $('#selected-products-table tbody tr').each(function () {
-                const Model = $(this).find('td:first').text();
+                const Catlog = $(this).find('td:first').text();
                 const Price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', '')) || 0;
                 const Quantity = parseFloat($(this).find('.quantity').val()) || 0;
                 const Discount = $(this).find('.discount').val();
@@ -336,7 +344,7 @@
 
          
                 const row = {
-                    Model: Model,
+                    Catlog: Catlog,
                     Price: Price.toFixed(2),
                     Quantity: Quantity,
                     SubTotal: subTotal.toFixed(2),
@@ -349,7 +357,7 @@
         
             // Add total amount as the last row
             data.push({
-                Model: 'Total Amount',
+                Catlog: 'Total Amount',
                 Price: '',
                 Quantity: '',
                 SubTotal: totalAmount.toFixed(2),
