@@ -26,4 +26,5 @@ urlpatterns = [
     path("", views.homepage, name="homepage"),
     path("ajax_search/", views.ajax_search, name="ajax_search"),
     path("download_excel/", views.download_excel, name="download_excel"),
+    path("download-excel/", views.download_excel_writer, name="download_excel_writer"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

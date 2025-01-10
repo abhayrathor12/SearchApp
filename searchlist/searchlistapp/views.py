@@ -1,15 +1,19 @@
 import pandas as pd
 from searchlistapp.models import Productlist  # Adjust import as per your app
 from django.shortcuts import render
+from django.http import JsonResponse, HttpResponse
+import openpyxl
+from openpyxl.utils import get_column_letter
+import json
+from django.views.decorators.csrf import csrf_exempt
+import pandas as pd
+from django.http import HttpResponse
+from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 
 
 def homepage(request):
 
     return render(request, "home.html")
-
-
-from django.http import JsonResponse
-from .models import Productlist
 
 
 def ajax_search(request):
@@ -26,76 +30,46 @@ def ajax_search(request):
     return JsonResponse({"results": results})
 
 
-from django.http import JsonResponse, HttpResponse
-import pandas as pd
-from io import BytesIO
-import json
-from django.views.decorators.csrf import csrf_exempt
-
-
-from django.http import JsonResponse, HttpResponse
-import pandas as pd
-from io import BytesIO
-import json
-import os
-from django.conf import settings
-
-import os
-import json
-import pandas as pd
-from io import BytesIO
-from django.http import JsonResponse
-from django.conf import settings
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side, Alignment
-from openpyxl.utils.dataframe import dataframe_to_rows
-from django.views.decorators.csrf import csrf_exempt
-
-
-import os
-import json
-from io import BytesIO
-import pandas as pd
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Border, Side, Alignment
-from openpyxl.utils.dataframe import dataframe_to_rows
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-
-
 @csrf_exempt
 def download_excel(request):
     if request.method == "POST":
         # Parse the JSON data sent from the frontend
         request_data = json.loads(request.body)
-        include_discount = request_data.get("include_discount", False)
-        include_list_price = request_data.get("include_list_price", False)
-        data = request_data.get("data", [])  # Get the product data
+        data_new = request_data.get("data", [])  # Get the product data
+        include_discount = data_new.get("include_discount")
+        include_list_price = data_new.get("include_list_price")
+        data_list = data_new.get("data", [])
+        print(data_new)
+        # Print the received data for debugging
+        print(f"Data received: {data_list}", include_discount, include_list_price)
 
-        # Remove unwanted columns based on user's choice
-        for row in data:
+        # Initialize a variable to calculate the subtotal sum
+        total_subtotal = 0
+
+        # Clean up the data by removing unnecessary columns
+        for row in data_list:
+            del row["Total"]
             if not include_discount and "Discount" in row:
                 del row["Discount"]
             if not include_list_price and "Price" in row:
                 del row["Price"]
 
-        # Convert the data into a pandas DataFrame
-        df = pd.DataFrame(data)
+            # Accumulate the subtotal (assuming there's a 'Subtotal' key in the row)
+            if "SubTotal" in row:
+                try:
+                    total_subtotal += float(row["SubTotal"])  # Add to the total sum
+                except ValueError:
+                    pass  # If the value is not a valid number, just skip
 
-        # Create a BytesIO object to store the Excel file in memory
-        output = BytesIO()
+        print(data_list, "yryyyr")
 
-        # Create a new workbook and select the active sheet
-        wb = Workbook()
+        # Create a new Excel workbook and sheet using openpyxl
+        wb = openpyxl.Workbook()
         ws = wb.active
+        ws.title = "Catalog Data"
 
-        # Write the DataFrame to the worksheet
-        for row in dataframe_to_rows(df, index=False, header=True):
-            ws.append(row)
-
-        # Style the header with yellow background and borders
-        yellow_fill = PatternFill(
+        # Define styles
+        header_fill = PatternFill(
             start_color="FFFF00", end_color="FFFF00", fill_type="solid"
         )
         thin_border = Border(
@@ -106,59 +80,119 @@ def download_excel(request):
         )
         center_alignment = Alignment(horizontal="center", vertical="center")
 
-        # Apply styles to header row
-        for cell in ws[1]:
-            cell.fill = yellow_fill
-            cell.border = thin_border
-            cell.alignment = center_alignment
+        # Define all headers dynamically from the first dictionary in data_list
+        headers = (
+            list(data_list[0].keys()) if data_list else []
+        )  # Extract keys from the first item
+        if headers:
+            for col_num, header in enumerate(headers, 1):
+                cell = ws[get_column_letter(col_num) + "1"]
+                cell.value = header
+                cell.fill = header_fill  # Apply yellow background
+                cell.border = thin_border  # Apply border
+                cell.alignment = center_alignment  # Center-align text
+                cell.font = Font(bold=True)  # Make header bold
 
-        # Apply borders and center alignment to all cells
-        for row in ws.iter_rows(
-            min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column
-        ):
-            for cell in row:
-                cell.border = thin_border
-                cell.alignment = center_alignment
+        # Write the data rows
+        for row_num, item in enumerate(data_list, 2):  # Start from row 2
+            for col_num, header in enumerate(headers, 1):
+                cell = ws[get_column_letter(col_num) + str(row_num)]
+                cell.value = item.get(header, "")  # Write data
+                cell.border = thin_border  # Apply border
+                cell.alignment = center_alignment  # Center-align text
 
-        # Auto-adjust column widths
-        for col in ws.columns:
-            max_length = 0
-            col_letter = col[0].column_letter  # Get the column letter
-            for cell in col:
-                if cell.value:  # Ensure the cell has a value
-                    max_length = max(max_length, len(str(cell.value)))
-            ws.column_dimensions[col_letter].width = max_length + 2  # Add some padding
+        # Add the Total Row at the bottom
+        total_row_num = len(data_list) + 2  # Row number for the total
+        ws[f"A{total_row_num}"].value = "Total"  # Label the first cell as "Total"
+        ws[f"A{total_row_num}"].font = Font(bold=True)  # Make it bold
+        ws[f"A{total_row_num}"].border = thin_border
+        ws[f"A{total_row_num}"].alignment = center_alignment  # Center-align the text
 
-        # Save the workbook to the output BytesIO object
-        wb.save(output)
+        # Write the total for the 'Subtotal' column (assuming it is at the index corresponding to the 'Subtotal' header)
+        subtotal_col_index = (
+            headers.index("SubTotal") + 1
+        )  # Index of the 'Subtotal' column (1-based)
+        ws[get_column_letter(subtotal_col_index) + str(total_row_num)].value = (
+            total_subtotal
+        )
+        ws[get_column_letter(subtotal_col_index) + str(total_row_num)].font = Font(
+            bold=True
+        )  # Make the total bold
+        ws[get_column_letter(subtotal_col_index) + str(total_row_num)].border = (
+            thin_border
+        )
+        ws[get_column_letter(subtotal_col_index) + str(total_row_num)].alignment = (
+            center_alignment  # Center-align the total value
+        )
 
-        # Move the cursor to the beginning of the file for sending
-        output.seek(0)
+        # Adjust column width based on the content
+        for col_num, header in enumerate(headers, 1):
+            column_letter = get_column_letter(col_num)
+            ws.column_dimensions[column_letter].width = max(len(header), 15)
 
-        # Create the filename dynamically
-        base_filename = "Quotation"
-        extension = ".xlsx"
-        counter = 0
-        while True:
-            filename = (
-                f"{base_filename}_{counter}{extension}"
-                if counter > 1
-                else f"{base_filename}{extension}"
-            )
-            file_path = os.path.join(settings.MEDIA_ROOT, filename)
-            if not os.path.exists(file_path):  # Check if the file already exists
-                break
-            counter += 1
+        # Apply outer border around the entire table
+        max_row = len(data_list) + 2  # Including the header and total row
+        max_col = len(headers)
 
-        # Save the Excel file temporarily in the media folder
-        with open(file_path, "wb") as f:
-            f.write(output.read())
+        # Apply outer border for all data and the total row
+        outer_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
 
-        # Return the URL of the file for download
-        file_url = os.path.join(settings.MEDIA_URL, filename)
+        for row in range(1, max_row + 1):
+            for col in range(1, max_col + 1):
+                cell = ws[get_column_letter(col) + str(row)]
+                cell.border = outer_border  # Apply outer border to all cells
 
-        return JsonResponse({"fileUrl": file_url})
+        # Prepare the response as an Excel file
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="CatalogData.xlsx"'
 
+        # Save the Excel file to the response
+        wb.save(response)
+
+        return response
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@csrf_exempt
+def download_excel_writer(request):
+    if request.method == "POST":
+        # Get data from the frontend (in JSON format)
+        data = json.loads(request.body).get("data", [])
+        print(type(data), data)
+        # Create a new Excel workbook and sheet
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Catalog Data"
+
+        # Write the header
+        headers = ["Catalog", "Price", "Discount"]
+        for col_num, header in enumerate(headers, 1):
+            ws[get_column_letter(col_num) + "1"] = header
+
+        # Write the data rows
+        for row_num, item in enumerate(data, 2):
+            ws["A" + str(row_num)] = item.get("Catalog")
+            ws["B" + str(row_num)] = item.get("Price")
+            ws["C" + str(row_num)] = item.get("Discount")
+
+        # Prepare the response as an Excel file
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = "attachment; filename=data.xlsx"
+
+        # Save the Excel file to the response
+        wb.save(response)
+
+        return response
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
@@ -193,4 +227,3 @@ def download_excel(request):
 # # File path
 # csv_path = "C:/Users/DELL/Desktop/SearchApp/searchlist/output.csv"
 # import_productlist_from_csv(csv_path)
- 

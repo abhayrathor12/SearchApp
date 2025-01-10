@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     {% load static %}
+
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Search</title>
@@ -61,6 +63,7 @@
         <h3 id="total-amount"></h3>
         <button id="open-popup-button">Download CSV</button>
     </div>
+    <button id="open-button">Download new</button>
     <div id="quit-popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
         <h2>Do you want to Discard?</h2>
         <button id="quit-yes">Yes</button>
@@ -308,21 +311,27 @@
                     include_list_price: includeListPrice,
                     data: getDataForExcel() // Include data from your table
                 };
+                
         
                 // AJAX POST request to send the options to the backend
-                $.ajax({
-                    url: '/download_excel/', // Your backend URL
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(data),
-                    success: function (response) {
-                        // Handle successful response (e.g., download the file)
-                        window.location.href = response.fileUrl; // Redirect to download the file
+                fetch("/download_excel/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                      
                     },
-                    error: function () {
-                        alert('Error generating the file.');
-                    }
-                });
+                    body: JSON.stringify({ data: data }),
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    // Create a link element
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'data.xlsx';  // Specify the name of the file
+                    link.click();
+                })
+                .catch(error => console.error('Error:', error));
+                
             }
         
             function getDataForExcel() {
@@ -348,25 +357,50 @@
                         UnitPrice:discountedPrice,
                         SubTotal: subTotal.toFixed(2),
                         Stock: Stock,
+                        Total: totalAmount.toFixed(2),
                     };
         
                     data.push(row);
                 });
         
-                // Add total amount as the last row
-                data.push({
-                    Catlog: 'Total Amount',
-                    Price: '',
-                    Quantity: '',
-                    SubTotal: totalAmount.toFixed(2),
-                    Stock: ''
-                });
-        
                 return data;
             }
         });
-        
+  
 
+        document.getElementById("open-button").addEventListener("click", function() {
+            // Create the data
+            const data = [
+                { Catalog: "fg-34", Price: 59200, Discount: 30 }
+            ];
+            
+            // Log the data
+            console.log(data);
+        
+            // Get the CSRF token from the cookie
+          
+        
+            // Send the data to the backend
+            fetch("/download-excel/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                  
+                },
+                body: JSON.stringify({ data: data }),
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                // Create a link element
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'data.xlsx';  // Specify the name of the file
+                link.click();
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    
+        
 
     </script>
 </body>
