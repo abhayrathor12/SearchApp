@@ -304,35 +304,40 @@
                 sendCsvOptions(includeDiscount, includeListPrice);
             });
         
-            function sendCsvOptions(includeDiscount, includeListPrice) {
-                // Prepare data for the backend
-                const data = {
-                    include_discount: includeDiscount,
-                    include_list_price: includeListPrice,
-                    data: getDataForExcel() // Include data from your table
-                };
-                
-        
-                // AJAX POST request to send the options to the backend
-                fetch("/download_excel/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                      
-                    },
-                    body: JSON.stringify({ data: data }),
-                })
-                .then(response => response.blob())
-                .then(blob => {
-                    // Create a link element
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'data.xlsx';  // Specify the name of the file
-                    link.click();
-                })
-                .catch(error => console.error('Error:', error));
-                
-            }
+            let downloadCount = 1;  // Initialize a download counter
+
+                function sendCsvOptions(includeDiscount, includeListPrice) {
+                    // Prepare data for the backend
+                    const data = {
+                        include_discount: includeDiscount,
+                        include_list_price: includeListPrice,
+                        data: getDataForExcel() // Include data from your table
+                    };
+
+                    // AJAX POST request to send the options to the backend
+                    fetch("/download_excel/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ data: data }),
+                    })
+                    .then(response => response.blob())
+                    .then(blob => {
+                        // Generate the dynamic file name based on the download count
+                        const fileName = `Quotation${downloadCount}.xlsx`;  // e.g., data_1.xlsx, data_2.xlsx
+
+                        // Create a link element
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = fileName;  // Specify the dynamic file name
+                        link.click();
+
+                        // Increment the download count for the next download
+                        downloadCount++;
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
         
             function getDataForExcel() {
                 const data = [];
