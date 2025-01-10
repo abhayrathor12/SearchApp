@@ -193,3 +193,4 @@ def download_excel(request):
 # # File path
 # csv_path = "C:/Users/DELL/Desktop/SearchApp/searchlist/output.csv"
 # import_productlist_from_csv(csv_path)
+ 

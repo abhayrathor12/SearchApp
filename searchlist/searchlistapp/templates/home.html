@@ -44,11 +44,12 @@
         <table id="summary-table">
             <thead>
                 <tr>
-                    <th>Model</th>
+                    <th>Catlog</th>
                     <th>Price</th>
                     <th>Quantity</th>
                     <th>Discount (%)</th>
                     <th>Subtotal</th>
+                    <th>Unit price</th>
                     <th>Stock Availability</th>
                   
                 </tr>
@@ -121,7 +122,7 @@
                                 results.forEach(function (item) {
                                     resultsContainer.append(
                                         `<li data-model="${item.model}" data-price="${item.list_price}">
-                                            ${item.model} - ₹${item.list_price}
+                                            ${item.model} 
                                         </li>`
                                     );
                                 });
@@ -196,23 +197,25 @@
              $('#next-button').on('click', function () {
                 $('#search-box, #results-container, #selected-products-table, #next-button, .searc, .searc1').hide();
                 $('#summary-section').show();
-
+            
                 const summaryBody = $('#summary-table tbody');
                 summaryBody.empty();
-
+            
                 let totalAmount = 0;
-
+            
                 $('#selected-products-table tbody tr').each(function () {
                     const model = $(this).find('td:first').text();
                     const price = parseFloat($(this).find('td:nth-child(2)').text().replace('₹', ''));
                     const quantity = parseFloat($(this).find('.quantity').val()) || 0;
                     const discount = parseFloat($(this).find('.discount').val()) || 0;
                     const stock = $(this).find('.stock').val();
-
-                    const discountedPrice = price - (price * discount / 100);
-                    const subtotal = discountedPrice * quantity;
+            
+                    // Calculate the discounted unit price and subtotal
+                    const discountedUnitPrice = price - (price * discount / 100);
+                    const subtotal = discountedUnitPrice * quantity;
                     totalAmount += subtotal;
-
+            
+                    // Append row to summary table
                     summaryBody.append(
                         `<tr>
                             <td>${model}</td>
@@ -220,14 +223,14 @@
                             <td>${quantity}</td>
                             <td>${discount}</td>
                             <td>₹${subtotal.toFixed(2)}</td>
+                            <td>₹${discountedUnitPrice.toFixed(2)}</td>
                             <td>${stock}</td>
                         </tr>`
                     );
                 });
-
+            
                 $('#total-amount').text(`Total Amount: ₹${totalAmount.toFixed(2)}`);
             });
-
             // Handle the close summary button (cross button)
             $('#close-summary').on('click', function () {
                 $('#quit-popup').show();
@@ -341,9 +344,10 @@
                         Catlog: Catlog,
                         Price: Price.toFixed(2),
                         Quantity: Quantity,
-                        SubTotal: subTotal.toFixed(2),
                         Discount: Discount + ' %',
-                        Stock: Stock
+                        UnitPrice:discountedPrice,
+                        SubTotal: subTotal.toFixed(2),
+                        Stock: Stock,
                     };
         
                     data.push(row);
